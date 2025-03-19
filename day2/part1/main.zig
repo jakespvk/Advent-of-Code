@@ -2,8 +2,7 @@ const std = @import("std");
 ////
 const INPUT_FILE = "small_input.txt";
 ////
-const COUNT_FILE_LINES = if (std.mem.eql(u8, INPUT_FILE, "input.txt")) 1000 else 6;
-const INT_SIZE = if (std.mem.eql(u8, INPUT_FILE, "input.txt")) i19 else i6;
+const INT_SIZE = if (std.mem.eql(u8, INPUT_FILE, "input.txt")) i8 else i6;
 
 pub fn main() !void {
     const file = std.fs.cwd().openFile(INPUT_FILE, .{}) catch |err| {
@@ -12,7 +11,7 @@ pub fn main() !void {
     };
     defer file.close();
 
-    std.debug.print("{d}\n", .{std.math.maxInt(INT_SIZE)});
+    // std.debug.print("{d}\n", .{std.math.maxInt(INT_SIZE)});
 
     var buffer: [128]u8 = undefined;
     var fba = std.heap.FixedBufferAllocator.init(&buffer);
@@ -24,27 +23,27 @@ pub fn main() !void {
     }) |line| outer: {
         defer allocator.free(line);
         var iter = std.mem.splitScalar(u8, line, ' ');
-        var prev: INT_SIZE = try std.fmt.parseInt(INT_SIZE, iter.next().?, 0);
+        var prev: INT_SIZE = try std.fmt.parseInt(INT_SIZE, iter.next().?, 10);
         var curr: INT_SIZE = undefined;
         var increasing = false;
         var first_run: bool = true;
-        while (iter.next()) |char| {
-            curr = try std.fmt.parseInt(INT_SIZE, char, 0);
-            std.debug.print("{d} {d} {}\n", .{ prev, curr, increasing });
-            if (curr == prev) {
-                break :outer;
-            }
-            if (@abs(curr - prev) > 3) {
-                break :outer;
-            } else if (first_run) {
+        var probation: bool = false;
+        while (iter.next()) |num| {
+            curr = try std.fmt.parseInt(INT_SIZE, num, 10);
+            if (first_run) {
+                first_run = false;
                 if (prev < curr) {
                     increasing = true;
-                    first_run = false;
                 }
-            } else if (increasing) {
-                if (prev >= curr) break :outer;
-            } else if (!increasing) {
-                if (prev <= curr) break :outer;
+            }
+            if (curr == prev) {
+                if (probation) break :outer else probation = true;
+            } else if (@abs(curr - prev) > 3) {
+                break :outer;
+            } else if (increasing and prev >= curr) {
+                if (probation) break :outer else probation = true;
+            } else if (!increasing and prev <= curr) {
+                if (probation) break :outer else probation = true;
             }
             prev = curr;
         }
